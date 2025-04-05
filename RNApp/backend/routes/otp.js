@@ -10,6 +10,9 @@ const client = twilio(
   process.env.TWILIO_ACCOUNT_SID,
   process.env.TWILIO_AUTH_TOKEN
 );
+console.log("SID:", process.env.TWILIO_ACCOUNT_SID);
+console.log("Token:", process.env.TWILIO_AUTH_TOKEN ? "Loaded ✅" : "Missing ❌");
+console.log("Service SID:", process.env.TWILIO_SERVICE_SID);
 
 // Helper function to validate phone number format
 const validatePhoneNumber = (phone) => {

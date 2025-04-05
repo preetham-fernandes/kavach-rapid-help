@@ -23,7 +23,7 @@ import { useRouter } from "expo-router";
 import { BlurView } from "expo-blur";
 
 const { width, height } = Dimensions.get("window");
-const API_BASE_URL = "http://172.20.10.3:9000";
+const API_BASE_URL = "http://172.20.10.2:9000";
 
 const ChatScreen = () => {
   // State and refs

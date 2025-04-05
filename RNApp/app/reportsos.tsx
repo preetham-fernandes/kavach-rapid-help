@@ -32,7 +32,7 @@ let globalNavigation: NavigationProp<RootStackParamList>;
 
 // Configure axios instance
 const api = axios.create({
-  baseURL: 'http://172.20.10.3:5000/api',
+  baseURL: 'http://172.20.10.2:5000/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -67,7 +67,7 @@ api.interceptors.response.use(
           throw new Error('No refresh token available');
         }
 
-        const response = await axios.post('http://172.20.10.3:5000/api/auth/refresh', {
+        const response = await axios.post('http://172.20.10.2:5000/api/auth/refresh', {
           refreshToken
         });
 

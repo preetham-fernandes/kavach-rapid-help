@@ -171,7 +171,7 @@ export default function DashboardScreen ({ navigation }: DashboardScreenProps) {
         : 'Unknown location';
   
       // 🚨 Send SOS to backend via Twilio
-      const response = await fetch('http://172.20.10.3:5000/api/sos/send-sos', {
+      const response = await fetch('http://172.20.10.2:5000/api/sos/send-sos', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
