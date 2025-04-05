@@ -22,7 +22,7 @@ type RootStackParamList = {
   Login: undefined;
   Dashboard: undefined;
   ChatScreen: undefined;
-  ReportCrime: undefined;
+  ReportSos: undefined;
   Community: undefined;
   Profile: undefined;
 };
@@ -52,7 +52,7 @@ export default function DashboardScreen ({ navigation }: DashboardScreenProps) {
   };
 
   const handleReportCrime = () => {
-    router.push("/reportcrime");
+    router.push("/reportsos");
   };
 
   // Get user data

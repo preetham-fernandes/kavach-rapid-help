@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import React, { useState, useRef } from 'react'
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 type Address = {
   street: string
@@ -164,9 +165,20 @@ export default function SignupScreen() {
         throw new Error(result.error || 'Registration failed')
       }
 
-      Alert.alert('Success', 'Account created successfully!', [
-        { text: 'OK', onPress: () => router.push('/login') }
-      ])
+      if (result.token && result.refreshToken && result.user) {
+        // Store tokens and user data
+        await Promise.all([
+          AsyncStorage.setItem('authToken', result.token),
+          AsyncStorage.setItem('refreshToken', result.refreshToken),
+          AsyncStorage.setItem('user', JSON.stringify(result.user))
+        ])
+
+        Alert.alert('Success', 'Account created successfully!', [
+          { text: 'OK', onPress: () => router.push('/dashboard') }
+        ])
+      } else {
+        throw new Error('Invalid response from server')
+      }
     } catch (error: any) {
       console.error('Signup error:', error)
       Alert.alert(

@@ -7,7 +7,7 @@ export default function Layout() {
       <Stack.Screen name="signup" />
       <Stack.Screen name="dashboard" />
       <Stack.Screen name="chatscreen" />
-      <Stack.Screen name="reportcrime" />
+      <Stack.Screen name="reportsos" />
     </Stack>
   );
 }

@@ -4,6 +4,7 @@ import LoginScreen from "../login";
 import SignupScreen from "../signup";
 import DashboardScreen from "../dashboard";
 import ChatScreen from "../chatscreen";
+import ReportSos from "../reportsos"
 
 // Define your root stack param list
 export type RootStackParamList = {
@@ -11,6 +12,7 @@ export type RootStackParamList = {
   Signup: undefined;
   Dashboard: undefined;
   ChatScreen: undefined;
+  ReportSos: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -23,6 +25,7 @@ export default function Navigation() {
         <Stack.Screen name="Signup" component={SignupScreen} />
         <Stack.Screen name="Dashboard" component={DashboardScreen} />
         <Stack.Screen name="ChatScreen" component={ChatScreen} />
+        <Stack.Screen name="ReportSos" component={ReportSos} />
       </Stack.Navigator>
     </NavigationContainer>
   );
