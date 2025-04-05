@@ -1,0 +1,21 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "jsx": "react-native",
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["./*"]
+    },
+    "allowJs": true
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.jsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts",
+    "nativewind-env.d.ts",
+    "backend/supabase.js"
+, "app/signup.tsx"  ]
+}
