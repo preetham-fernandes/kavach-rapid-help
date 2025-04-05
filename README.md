@@ -187,10 +187,10 @@ yarn ios
 
 **Team InnovationNation**
 
-- **Shashank Tiwari** - Project Manager, App Developer & Researcher
 - **Joshua Dmello** - ML Specialist & LLM Enthusiast
-- **Sakshi Kupekar** - App Developer
 - **Preetham Fernandes** - Full Stack Developer
+- **Shashank Tiwari** - Project Manager, App Developer & Researcher
+- **Sakshi Kupekar** - App Developer
 
 ## Contributing
 
