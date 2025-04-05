@@ -1,7 +1,7 @@
 //server.js
+import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import otpRoutes from './routes/otp.js'; 
 import sosRoutes from './routes/sos.js';

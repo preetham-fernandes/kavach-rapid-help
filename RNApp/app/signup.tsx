@@ -43,12 +43,15 @@ export default function SignupScreen() {
   const [gender, setGender] = useState('')
   const [age, setAge] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [otpSent, setOtpSent] = useState(false)
-  const [otp, setOtp] = useState('')
+  // Commented out OTP related states
+  // const [otpSent, setOtpSent] = useState(false)
+  // const [otp, setOtp] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
   const scrollViewRef = useRef<ScrollView>(null)
 
+  // Commented out OTP functions
+  /*
   const sendOtp = async () => {
     if (!mobileNumber) {
       Alert.alert('Error', 'Mobile number is required for OTP verification')
@@ -57,7 +60,7 @@ export default function SignupScreen() {
 
     setIsLoading(true)
     try {
-      const response = await fetch('http://172.20.10.3:5000/api/otp/send', {
+      const response = await fetch('http://172.20.10.2:5000/api/otp/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -101,7 +104,7 @@ export default function SignupScreen() {
 
     setIsLoading(true)
     try {
-      const response = await fetch('http://172.20.10.3:5000/api/otp/verify', {
+      const response = await fetch('http://172.20.10.2:5000/api/otp/verify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -132,6 +135,7 @@ export default function SignupScreen() {
       setIsLoading(false)
     }
   }
+  */
 
   const handleSignup = async () => {
     if (!email || !password || !fullName) {
@@ -141,7 +145,7 @@ export default function SignupScreen() {
 
     setIsLoading(true)
     try {
-      const response = await fetch('http://172.20.10.3:5000/api/auth/signup', {
+      const response = await fetch('http://172.20.10.2:5000/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -196,7 +200,7 @@ export default function SignupScreen() {
       return
     }
 
-    if (currentStep < 4) {
+    if (currentStep < 3) { // Changed from 4 to 3 since we removed OTP step
       setCurrentStep(currentStep + 1)
       scrollViewRef.current?.scrollTo({ y: 0, animated: true })
     }
@@ -212,7 +216,7 @@ export default function SignupScreen() {
   const renderStepIndicator = () => {
     return (
       <View style={styles.stepIndicator}>
-        {[1, 2, 3, 4].map(step => (
+        {[1, 2, 3].map(step => ( // Changed from [1, 2, 3, 4] to [1, 2, 3]
           <View key={step} style={styles.stepContainer}>
             <View
               style={[
@@ -234,7 +238,7 @@ export default function SignupScreen() {
                 </Text>
               )}
             </View>
-            {step < 4 && (
+            {step < 3 && ( // Changed from 4 to 3
               <View
                 style={[
                   styles.stepLine,
@@ -254,8 +258,8 @@ export default function SignupScreen() {
     const titles = [
       'Basic Information',
       'Contact Details',
-      'Personal Information',
-      'OTP Verification'
+      'Personal Information'
+      // Removed 'OTP Verification'
     ]
 
     return <Text style={styles.stepTitle}>{titles[currentStep - 1]}</Text>
@@ -520,74 +524,7 @@ export default function SignupScreen() {
     )
   }
 
-  const renderStep4 = () => {
-    return (
-      <>
-        {!otpSent ? (
-          <TouchableOpacity
-            onPress={sendOtp}
-            style={styles.otpButton}
-            disabled={isLoading || (!email && !mobileNumber)}
-          >
-            {isLoading ? (
-              <ActivityIndicator color='white' />
-            ) : (
-              <>
-                <Ionicons
-                  name='shield-checkmark-outline'
-                  size={18}
-                  color='white'
-                  style={{ marginRight: 8 }}
-                />
-                <Text style={styles.buttonText}>Send Verification OTP</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        ) : (
-          <>
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Enter OTP</Text>
-              <View style={styles.otpInputContainer}>
-                {[0, 1, 2, 3, 4, 5].map(index => (
-                  <TextInput
-                    key={index}
-                    style={styles.otpDigit}
-                    maxLength={1}
-                    keyboardType='number-pad'
-                    value={otp[index] || ''}
-                    onChangeText={value => {
-                      const newOtp = otp.split('')
-                      newOtp[index] = value
-                      setOtp(newOtp.join(''))
-                    }}
-                  />
-                ))}
-              </View>
-            </View>
-            <TouchableOpacity
-              onPress={verifyOtp}
-              style={styles.verifyButton}
-              disabled={isLoading || otp.length < 6}
-            >
-              {isLoading ? (
-                <ActivityIndicator color='white' />
-              ) : (
-                <>
-                  <Ionicons
-                    name='checkmark-circle-outline'
-                    size={18}
-                    color='white'
-                    style={{ marginRight: 8 }}
-                  />
-                  <Text style={styles.buttonText}>Verify OTP</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </>
-        )}
-      </>
-    )
-  }
+  // Removed renderStep4 function since we don't need OTP verification anymore
 
   const renderCurrentStep = () => {
     switch (currentStep) {
@@ -597,8 +534,6 @@ export default function SignupScreen() {
         return renderStep2()
       case 3:
         return renderStep3()
-      case 4:
-        return renderStep4()
       default:
         return null
     }
@@ -623,7 +558,7 @@ export default function SignupScreen() {
           </TouchableOpacity>
         )}
 
-        {currentStep < 4 ? (
+        {currentStep < 3 ? ( // Changed from 4 to 3
           <TouchableOpacity
             style={[
               styles.nextButton,
