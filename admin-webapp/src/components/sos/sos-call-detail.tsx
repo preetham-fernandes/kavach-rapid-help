@@ -1,85 +1,149 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { motion } from "framer-motion"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PhoneCall, MapPin, Clock, User, MessageSquare, FileText, CheckCircle, AlertTriangle } from "lucide-react"
-import maplibregl from "maplibre-gl"
-import "maplibre-gl/dist/maplibre-gl.css"
-import { useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from 'react'
+import { motion } from 'framer-motion'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { 
+  PhoneCall, MapPin, Clock, User, MessageSquare, 
+  FileText, CheckCircle, AlertTriangle, Play, Pause, Volume2 
+} from 'lucide-react'
+import maplibregl from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
+import { SosReport, formatLocation, getAudioUrl } from '@/lib/sos-utils'
+import { Progress } from '@/components/ui/progress'
 
-export default function SosCallDetail({ call }) {
-  const [activeTab, setActiveTab] = useState("details")
-  const mapContainer = useRef(null)
-  const map = useRef(null)
+interface SosCallDetailProps {
+  sosReport: SosReport
+}
 
+export default function SosCallDetail({ sosReport }: SosCallDetailProps) {
+  const [activeTab, setActiveTab] = useState('details')
+  const mapContainer = useRef<HTMLDivElement>(null)
+  const map = useRef<maplibregl.Map | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [audioReady, setAudioReady] = useState(false)
+
+  // Configure audio player
   useEffect(() => {
-    if (!call || !mapContainer.current) return
+    if (!sosReport?.audio_url) return
+
+    const audioUrl = getAudioUrl(sosReport.audio_url)
+    if (!audioUrl) return
+
+    // Create audio element
+    const audio = new Audio(audioUrl)
+    audioRef.current = audio
+
+    // Setup event listeners
+    audio.addEventListener('loadedmetadata', () => {
+      setDuration(audio.duration)
+      setAudioReady(true)
+    })
+
+    audio.addEventListener('timeupdate', () => {
+      setCurrentTime(audio.currentTime)
+      setProgress((audio.currentTime / audio.duration) * 100)
+    })
+
+    audio.addEventListener('ended', () => {
+      setIsPlaying(false)
+      setProgress(0)
+      setCurrentTime(0)
+    })
+
+    return () => {
+      // Cleanup
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.src = ''
+      }
+    }
+  }, [sosReport.audio_url])
+
+  // Toggle play/pause
+  const togglePlay = () => {
+    if (!audioRef.current) return
+
+    if (isPlaying) {
+      audioRef.current.pause()
+    } else {
+      audioRef.current.play()
+    }
+    
+    setIsPlaying(!isPlaying)
+  }
+
+  // Format time in seconds to MM:SS
+  const formatTime = (timeInSeconds: number) => {
+    const minutes = Math.floor(timeInSeconds / 60)
+    const seconds = Math.floor(timeInSeconds % 60)
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`
+  }
+
+  // Initialize map when component mounts and sosReport changes
+  useEffect(() => {
+    if (!mapContainer.current) return
+
+    // Get coordinates from location
+let lat = 19.0760, lng = 72.8777;  // Default to Mumbai coordinates
+
+if (sosReport.location) {
+  if (typeof sosReport.location === 'string') {
+    try {
+      const locationObj = JSON.parse(sosReport.location);
+      if (locationObj.coordinates) {
+        lat = locationObj.coordinates.latitude || lat;
+        lng = locationObj.coordinates.longitude || lng;
+      }
+    } catch (e) {
+      console.error('Failed to parse location', e);
+    }
+  } else if (sosReport.location.coordinates) {
+    lat = sosReport.location.coordinates.latitude || lat;
+    lng = sosReport.location.coordinates.longitude || lng;
+  }
+}
 
     // Initialize map
     if (map.current) map.current.remove()
 
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: `https://api.maptiler.com/maps/streets/style.json?key=HeRB5Dr0kIRxuboMfGuL`,
-      center: [-74.006, 40.7128], // New York City coordinates
+      style: 'https://api.maptiler.com/maps/streets/style.json?key=HeRB5Dr0kIRxuboMfGuL',
+      center: [lng, lat],
       zoom: 14,
     })
 
     // Add marker for SOS location
-    const marker = new maplibregl.Marker({ color: "#ef4444" }).setLngLat([-74.006, 40.7128]).addTo(map.current)
+    new maplibregl.Marker({ color: '#ef4444' })
+      .setLngLat([lng, lat])
+      .addTo(map.current)
 
     // Add navigation control
     map.current.addControl(new maplibregl.NavigationControl())
 
     return () => {
-      if (map.current) map.current.remove()
+      if (map.current && typeof map.current.remove === 'function') {
+        map.current.remove()
+        map.current = null
+      }
     }
-  }, [call])
-
-  if (!call) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[400px] text-gray-500">
-        <PhoneCall className="h-12 w-12 mb-4 text-gray-300" />
-        <p>Select an SOS call to view details</p>
-      </div>
-    )
-  }
+    
+  }, [sosReport, activeTab])
 
   return (
-    <div>
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-semibold">{call.location}</h2>
-          <div className="flex items-center mt-1">
-            <span className="text-sm text-gray-500 mr-2">Call ID: {call.id}</span>
-            <Badge
-              className={
-                call.status === "Active" ? "bg-red-500" : call.status === "Responding" ? "bg-amber-500" : "bg-green-500"
-              }
-            >
-              {call.status}
-            </Badge>
-          </div>
-        </div>
-
-        <div className="flex space-x-2 mt-4 md:mt-0">
-          {call.status === "Active" && <Button>Respond to Call</Button>}
-          {call.status === "Responding" && <Button>Mark as Resolved</Button>}
-          <Button variant="outline">
-            <FileText className="h-4 w-4 mr-2" />
-            Generate Report
-          </Button>
-        </div>
-      </div>
-
+    <div className="p-6">
       <Tabs defaultValue="details" value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid grid-cols-3 mb-6">
           <TabsTrigger value="details">Call Details</TabsTrigger>
           <TabsTrigger value="location">Location</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          <TabsTrigger value="audio">Audio Recording</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details" className="space-y-6">
@@ -97,34 +161,45 @@ export default function SosCallDetail({ call }) {
                   <Clock className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium">Timestamp</p>
-                    <p className="text-sm text-gray-600">{new Date(call.timestamp).toLocaleString()}</p>
+                    <p className="text-sm text-gray-600">{new Date(sosReport.created_at).toLocaleString()}</p>
                   </div>
                 </div>
 
                 <div className="flex items-start">
                   <User className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium">Received By</p>
-                    <p className="text-sm text-gray-600">{call.receivedBy}</p>
+                    <p className="text-sm font-medium">User ID</p>
+                    <p className="text-sm text-gray-600">{sosReport.user_id}</p>
                   </div>
                 </div>
-
-                {call.respondingOfficer && (
-                  <div className="flex items-start">
-                    <AlertTriangle className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">Responding Officer</p>
-                      <p className="text-sm text-gray-600">{call.respondingOfficer}</p>
-                    </div>
-                  </div>
-                )}
 
                 <div className="flex items-start">
                   <PhoneCall className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium">Caller Information</p>
-                    <p className="text-sm text-gray-600">{call.callerName}</p>
-                    <p className="text-sm text-gray-600">{call.callerPhone}</p>
+                    <p className="text-sm font-medium">Emergency Contact</p>
+                    <p className="text-sm text-gray-600">{sosReport.emergency_contact || 'Not provided'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start">
+                  <AlertTriangle className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">Status</p>
+                    <Badge
+                      className={
+                        sosReport.status === 'pending'
+                          ? 'bg-red-500'
+                          : sosReport.status === 'responding'
+                            ? 'bg-amber-500'
+                            : 'bg-green-500'
+                      }
+                    >
+                      {sosReport.status === 'pending'
+                        ? 'Active'
+                        : sosReport.status === 'responding'
+                          ? 'Responding'
+                          : 'Resolved'}
+                    </Badge>
                   </div>
                 </div>
               </div>
@@ -142,35 +217,25 @@ export default function SosCallDetail({ call }) {
                 <div className="flex items-start">
                   <MessageSquare className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium">Description</p>
-                    <p className="text-sm text-gray-600">{call.description}</p>
+                    <p className="text-sm font-medium">Report Details</p>
+                    <p className="text-sm text-gray-600">{sosReport.additional_details || 'No additional details provided'}</p>
                   </div>
                 </div>
 
                 <div className="flex items-start">
-                  <CheckCircle className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
+                  <MapPin className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium">Priority Level</p>
-                    <Badge
-                      className={
-                        call.priority === "High"
-                          ? "bg-red-500"
-                          : call.priority === "Medium"
-                            ? "bg-amber-500"
-                            : "bg-blue-500"
-                      }
-                    >
-                      {call.priority}
-                    </Badge>
+                    <p className="text-sm font-medium">Location</p>
+                    <p className="text-sm text-gray-600">{formatLocation(sosReport.location)}</p>
                   </div>
                 </div>
 
-                {call.notes && (
+                {sosReport.audio_url && (
                   <div className="flex items-start">
-                    <FileText className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
+                    <Volume2 className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium">Additional Notes</p>
-                      <p className="text-sm text-gray-600">{call.notes}</p>
+                      <p className="text-sm font-medium">Audio Recording</p>
+                      <p className="text-sm text-gray-600">Audio statement available (see Audio tab)</p>
                     </div>
                   </div>
                 )}
@@ -187,17 +252,21 @@ export default function SosCallDetail({ call }) {
             <h3 className="text-lg font-medium mb-4">Response Actions</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button className="w-full">
-                <PhoneCall className="h-4 w-4 mr-2" />
-                Call Back
-              </Button>
+              {sosReport.emergency_contact && (
+                <Button className="w-full">
+                  <PhoneCall className="h-4 w-4 mr-2" />
+                  Call {sosReport.emergency_contact}
+                </Button>
+              )}
+
               <Button className="w-full" variant="outline">
                 <MapPin className="h-4 w-4 mr-2" />
                 Get Directions
               </Button>
+
               <Button className="w-full" variant="outline">
                 <AlertTriangle className="h-4 w-4 mr-2" />
-                Escalate
+                Dispatch Emergency Services
               </Button>
             </div>
           </motion.div>
@@ -214,23 +283,29 @@ export default function SosCallDetail({ call }) {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-1 space-y-4">
-                <div>
-                  <p className="text-sm font-medium">Address</p>
-                  <p className="text-sm text-gray-600">{call.location}</p>
-                </div>
+              <div>
+  <p className="text-sm font-medium">Address/Location</p>
+  <p className="text-sm text-gray-600">{formatLocation(sosReport.location)}</p>
+</div>
+
+<div>
+  <p className="text-sm font-medium">Coordinates</p>
+  {typeof sosReport.location === 'object' && 
+   sosReport.location && 
+   sosReport.location.coordinates && 
+   sosReport.location.coordinates.latitude && 
+   sosReport.location.coordinates.longitude ? (
+    <p className="text-sm text-gray-600">
+      Lat: {sosReport.location.coordinates.latitude}, Long: {sosReport.location.coordinates.longitude}
+    </p>
+  ) : (
+    <p className="text-sm text-gray-600">Coordinates not available</p>
+  )}
+</div>
 
                 <div>
-                  <p className="text-sm font-medium">Coordinates</p>
-                  <p className="text-sm text-gray-600">40.7128° N, 74.0060° W</p>
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium">Nearest Landmarks</p>
-                  <ul className="text-sm text-gray-600 list-disc pl-5 mt-1">
-                    <li>Central Park (0.5 miles)</li>
-                    <li>City Hospital (1.2 miles)</li>
-                    <li>Police Station #4 (0.8 miles)</li>
-                  </ul>
+                  <p className="text-sm font-medium">Reported Time</p>
+                  <p className="text-sm text-gray-600">{new Date(sosReport.created_at).toLocaleString()}</p>
                 </div>
 
                 <Button className="w-full">
@@ -240,7 +315,7 @@ export default function SosCallDetail({ call }) {
               </div>
 
               <div className="md:col-span-2">
-                <div className="h-[300px] rounded-lg overflow-hidden">
+                <div className="h-[400px] rounded-lg overflow-hidden border border-gray-200">
                   <div ref={mapContainer} className="h-full w-full" />
                 </div>
               </div>
@@ -248,123 +323,84 @@ export default function SosCallDetail({ call }) {
           </motion.div>
         </TabsContent>
 
-        <TabsContent value="timeline">
+        <TabsContent value="audio">
           <motion.div
             className="bg-white border border-gray-200 rounded-lg p-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <h3 className="text-lg font-medium mb-4">Call Timeline</h3>
+            <h3 className="text-lg font-medium mb-4">Audio Recording</h3>
 
-            <div className="relative">
-              {/* Timeline line */}
-              <div className="absolute left-4 top-0 bottom-0 w-px bg-gray-200"></div>
-
+            {!sosReport.audio_url ? (
+              <div className="text-center py-8 bg-gray-50 rounded-lg">
+                <Volume2 className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+                <h3 className="text-lg font-medium text-gray-600">No audio recording available</h3>
+                <p className="text-gray-500 mt-1">
+                  This SOS report does not include an audio recording.
+                </p>
+              </div>
+            ) : (
               <div className="space-y-6">
-                {[
-                  {
-                    title: "Call Received",
-                    description: `Emergency call received from ${call.callerName}`,
-                    timestamp: call.timestamp,
-                    icon: PhoneCall,
-                    status: "complete",
-                  },
-                  {
-                    title: "Dispatcher Assessment",
-                    description: `Call assessed by ${call.receivedBy}`,
-                    timestamp: new Date(new Date(call.timestamp).getTime() + 2 * 60000).toISOString(),
-                    icon: User,
-                    status: "complete",
-                  },
-                  {
-                    title: "Officer Assigned",
-                    description: call.respondingOfficer
-                      ? `${call.respondingOfficer} assigned to respond`
-                      : "Pending officer assignment",
-                    timestamp: call.respondingOfficer
-                      ? new Date(new Date(call.timestamp).getTime() + 5 * 60000).toISOString()
-                      : "",
-                    icon: AlertTriangle,
-                    status: call.respondingOfficer ? "complete" : "pending",
-                  },
-                  {
-                    title: "Officer En Route",
-                    description: call.respondingOfficer
-                      ? `${call.respondingOfficer} en route to location`
-                      : "Pending officer dispatch",
-                    timestamp: call.respondingOfficer
-                      ? new Date(new Date(call.timestamp).getTime() + 8 * 60000).toISOString()
-                      : "",
-                    icon: MapPin,
-                    status: call.respondingOfficer && call.status !== "Active" ? "complete" : "pending",
-                  },
-                  {
-                    title: "Situation Resolved",
-                    description: "Emergency situation addressed and resolved",
-                    timestamp:
-                      call.status === "Resolved"
-                        ? new Date(new Date(call.timestamp).getTime() + 45 * 60000).toISOString()
-                        : "",
-                    icon: CheckCircle,
-                    status: call.status === "Resolved" ? "complete" : "pending",
-                  },
-                ].map((item, index) => (
-                  <div key={index} className="relative pl-10">
-                    {/* Timeline dot */}
-                    <div
-                      className={`absolute left-0 top-1 h-8 w-8 rounded-full flex items-center justify-center ${
-                        item.status === "complete"
-                          ? "bg-green-100"
-                          : item.status === "in-progress"
-                            ? "bg-amber-100"
-                            : "bg-gray-100"
-                      }`}
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <div className="flex items-center">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-12 w-12 rounded-full bg-primary text-white hover:bg-primary/90"
+                      onClick={togglePlay}
+                      disabled={!audioReady}
                     >
-                      <item.icon
-                        className={`h-4 w-4 ${
-                          item.status === "complete"
-                            ? "text-green-500"
-                            : item.status === "in-progress"
-                              ? "text-amber-500"
-                              : "text-gray-400"
-                        }`}
-                      />
-                    </div>
+                      {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
+                    </Button>
 
-                    <div>
-                      <div className="flex items-center">
-                        <h4 className="text-sm font-medium">{item.title}</h4>
-                        <Badge
-                          className="ml-2"
-                          variant={
-                            item.status === "complete"
-                              ? "default"
-                              : item.status === "in-progress"
-                                ? "outline"
-                                : "secondary"
-                          }
-                        >
-                          {item.status === "complete"
-                            ? "Complete"
-                            : item.status === "in-progress"
-                              ? "In Progress"
-                              : "Pending"}
-                        </Badge>
+                    <div className="ml-4 flex-1">
+                      <div className="flex justify-between text-sm">
+                        <span>{formatTime(currentTime)}</span>
+                        <span>{formatTime(duration)}</span>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">{item.description}</p>
-                      {item.timestamp && (
-                        <p className="text-xs text-gray-400 mt-1">{new Date(item.timestamp).toLocaleString()}</p>
-                      )}
+                      <Progress value={progress} className="h-2 mt-1" />
                     </div>
                   </div>
-                ))}
+
+                  <div className="mt-6">
+                    <h4 className="text-sm font-medium mb-2">Recording Information</h4>
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-700">
+                        <span className="font-medium">Source:</span> Emergency call recording
+                      </p>
+                      <p className="text-sm text-gray-700">
+                        <span className="font-medium">Recorded at:</span> {new Date(sosReport.created_at).toLocaleString()}
+                      </p>
+                      <p className="text-sm text-gray-700">
+                        <span className="font-medium">Location:</span> {formatLocation(sosReport.location)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Report Details</h4>
+                  <div className="bg-gray-50 p-4 rounded-lg text-sm border border-gray-200">
+                    <p>{sosReport.additional_details || "No additional details provided with this recording."}</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-2">
+                  <Button variant="outline">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Transcribe Audio
+                  </Button>
+                  <Button>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Mark as Reviewed
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
           </motion.div>
         </TabsContent>
       </Tabs>
     </div>
   )
 }
-

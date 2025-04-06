@@ -1,37 +1,46 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { mockSosCalls } from "@/lib/mock-data"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Search, PhoneCall } from "lucide-react"
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Search, PhoneCall, Clock } from 'lucide-react'
+import { SosReport, formatLocation, getStatusBadgeColor } from '@/lib/sos-utils'
+import Link from 'next/link'
 
 interface SosCallsProps {
-  selectedCallId: string | null
-  onSelectCall: (id: string) => void
+  reports: SosReport[]
+  loading: boolean
 }
 
-export default function SosCalls({ selectedCallId, onSelectCall }: SosCallsProps) {
-  const [searchQuery, setSearchQuery] = useState("")
+export default function SosCalls({ reports, loading }: SosCallsProps) {
+  const [searchQuery, setSearchQuery] = useState('')
 
-  // Filter and sort SOS calls
-  const filteredCalls = mockSosCalls
-    .filter(
-      (call) =>
-        call.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        call.receivedBy.toLowerCase().includes(searchQuery.toLowerCase()),
+  // Filter SOS calls based on search
+  const filteredReports = reports.filter((report) => {
+    const locationStr = formatLocation(report.location).toLowerCase()
+    const detailsStr = (report.additional_details || '').toLowerCase()
+    const contactStr = (report.emergency_contact || '').toLowerCase()
+    const searchLower = searchQuery.toLowerCase()
+
+    return (
+      locationStr.includes(searchLower) ||
+      detailsStr.includes(searchLower) ||
+      contactStr.includes(searchLower)
     )
-    .sort((a, b) => {
-      // Sort by status first (Active > Responding > Resolved)
-      const statusOrder = { Active: 0, Responding: 1, Resolved: 2 }
-      const statusDiff = statusOrder[a.status] - statusOrder[b.status]
+  })
 
-      if (statusDiff !== 0) return statusDiff
+  // Sort reports by priority and timestamp
+  const sortedReports = [...filteredReports].sort((a, b) => {
+    // First sort by status (pending > responding > resolved)
+    const statusOrder = { pending: 0, responding: 1, resolved: 2 }
+    const statusDiff = statusOrder[a.status] - statusOrder[b.status]
 
-      // Then sort by timestamp (newest first)
-      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    })
+    if (statusDiff !== 0) return statusDiff
+
+    // Then sort by created_at (newest first)
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  })
 
   return (
     <div className="space-y-4">
@@ -46,70 +55,80 @@ export default function SosCalls({ selectedCallId, onSelectCall }: SosCallsProps
         />
       </div>
 
-      <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
-        <AnimatePresence>
-          {filteredCalls.map((call) => (
-            <motion.div
-              key={call.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-              className={`p-3 border rounded-md cursor-pointer transition-colors ${
-                selectedCallId === call.id ? "border-primary bg-primary/5" : "border-gray-200 hover:bg-gray-50"
-              }`}
-              onClick={() => onSelectCall(call.id)}
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex items-center">
-                  <div
-                    className={`h-8 w-8 rounded-full flex items-center justify-center mr-3 ${
-                      call.status === "Active"
-                        ? "bg-red-100 text-red-500"
-                        : call.status === "Responding"
-                          ? "bg-amber-100 text-amber-500"
-                          : "bg-green-100 text-green-500"
-                    }`}
-                  >
-                    <PhoneCall className="h-4 w-4" />
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      ) : sortedReports.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          {searchQuery 
+            ? "No SOS calls match your search criteria" 
+            : "No SOS calls available"}
+        </div>
+      ) : (
+        <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
+          <AnimatePresence>
+            {sortedReports.map((report) => (
+              <motion.div
+                key={report.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="p-3 border rounded-md cursor-pointer transition-colors hover:bg-gray-50"
+              >
+                <Link href={`/sos/${report.id}`} className="block">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center">
+                      <div
+                        className={`h-8 w-8 rounded-full flex items-center justify-center mr-3 ${
+                          report.status === 'pending'
+                            ? 'bg-red-100 text-red-500'
+                            : report.status === 'responding'
+                              ? 'bg-amber-100 text-amber-500'
+                              : 'bg-green-100 text-green-500'
+                        }`}
+                      >
+                        <PhoneCall className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-medium">{formatLocation(report.location)}</h4>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(report.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge className={getStatusBadgeColor(report.status)}>
+                      {report.status === 'pending'
+                        ? 'Active'
+                        : report.status === 'responding'
+                          ? 'Responding'
+                          : 'Resolved'}
+                    </Badge>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-medium">{call.location}</h4>
-                    <p className="text-xs text-gray-500 mt-1">{new Date(call.timestamp).toLocaleString()}</p>
+
+                  <div className="mt-2 pl-11">
+                    {report.emergency_contact && (
+                      <p className="text-xs text-gray-700">
+                        <span className="font-medium">Emergency Contact:</span> {report.emergency_contact}
+                      </p>
+                    )}
+                    {report.additional_details && (
+                      <p className="text-xs text-gray-700 line-clamp-1 mt-1">
+                        <span className="font-medium">Details:</span> {report.additional_details}
+                      </p>
+                    )}
+                    <div className="flex items-center text-xs text-gray-500 mt-1">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {new Date(report.created_at).toLocaleString()}
+                    </div>
                   </div>
-                </div>
-                <Badge
-                  className={
-                    call.status === "Active"
-                      ? "bg-red-500"
-                      : call.status === "Responding"
-                        ? "bg-amber-500"
-                        : "bg-green-500"
-                  }
-                >
-                  {call.status}
-                </Badge>
-              </div>
-
-              <div className="mt-2 pl-11">
-                <p className="text-xs text-gray-700">
-                  <span className="font-medium">Received by:</span> {call.receivedBy}
-                </p>
-                {call.respondingOfficer && (
-                  <p className="text-xs text-gray-700">
-                    <span className="font-medium">Responding:</span> {call.respondingOfficer}
-                  </p>
-                )}
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-
-        {filteredCalls.length === 0 && (
-          <div className="text-center py-8 text-gray-500">No SOS calls match your search</div>
-        )}
-      </div>
+                </Link>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   )
 }
-

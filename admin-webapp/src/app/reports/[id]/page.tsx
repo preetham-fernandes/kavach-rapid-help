@@ -29,9 +29,9 @@ export default function ReportDetailPage({ params }: { params: { id: string } })
             <div className="bg-white rounded-lg shadow p-6 mb-6">
               <ReportLocation report={report} />
             </div>
-            <div className="bg-white rounded-lg shadow p-6">
+            {/* <div className="bg-white rounded-lg shadow p-6">
               <ReportTimeline report={report} />
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
   { icon: Map, label: "Incident Map", href: "/map" },
-  { icon: FileText, label: "Reports", href: "/reports/RPT-001" },
+  { icon: FileText, label: "Reports", href: "/reports" },
   { icon: Briefcase, label: "Evidence", href: "/evidence" },
   { icon: PhoneCall, label: "SOS Calls", href: "/sos" },
   { icon: Settings, label: "Settings", href: "/settings" },
@@ -18,19 +18,6 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const [emergencyCount, setEmergencyCount] = useState(3)
-
-  // Simulate emergency count changing
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setEmergencyCount((prev) => {
-        const change = Math.random() > 0.7 ? 1 : 0
-        return prev + change
-      })
-    }, 30000)
-
-    return () => clearInterval(interval)
-  }, [])
 
   return (
     <div className="fixed inset-y-0 left-0 z-50 w-[260px] bg-gradient-to-b from-gray-900 to-gray-800 text-white shadow-xl">
@@ -65,11 +52,7 @@ export default function Sidebar() {
                   <item.icon className="mr-3 h-5 w-5" />
                   <span>{item.label}</span>
 
-                  {item.label === "SOS Calls" && (
-                    <div className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                      {emergencyCount}
-                    </div>
-                  )}
+                  {item.label === "SOS Calls"}
                 </Link>
               </motion.div>
             )
@@ -80,11 +63,11 @@ export default function Sidebar() {
         <div className="p-4 border-t border-gray-700">
           <div className="flex items-center">
             <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
-              <span className="text-white font-semibold">JD</span>
+              <span className="text-white font-semibold">OP</span>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-white">Officer John Doe</p>
-              <p className="text-xs text-gray-400">Badge #12345</p>
+              <p className="text-sm font-medium text-white">Officer Pandey</p>
+              <p className="text-xs text-gray-400">Badge 43752</p>
             </div>
           </div>
           <button className="mt-4 flex items-center text-sm text-gray-300 hover:text-white w-full rounded-md px-4 py-2 hover:bg-gray-700 transition-colors">

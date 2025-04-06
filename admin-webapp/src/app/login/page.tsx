@@ -102,7 +102,7 @@ export default function Login() {
       }
       
       setDebug(prev => `${prev}\nUser is admin, redirecting...`);
-      router.push('/admin/dashboard');
+      router.push('/');
     } catch (error) {
       console.error('Error during login:', error);
       setError(error.message || 'Login failed. Please try again.');

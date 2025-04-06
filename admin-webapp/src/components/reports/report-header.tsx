@@ -7,7 +7,7 @@ export default function ReportHeader({ report }) {
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <div className="flex items-center mb-4">
-        <Link href="/" className="text-gray-500 hover:text-primary mr-2">
+        <Link href="/reports" className="text-gray-500 hover:text-primary mr-2">
           <ChevronLeft className="h-5 w-5" />
         </Link>
         <h1 className="text-2xl font-bold text-gray-900">Report Details</h1>
