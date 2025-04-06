@@ -115,3 +115,23 @@
   transform: scale(1.2);
 }
 
+/* Google Maps custom styles */
+.gm-style-iw {
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.gm-style-iw button {
+  top: 2px !important;
+  right: 2px !important;
+}
+
+/* Custom marker styles */
+.map-marker {
+  transform-origin: center bottom;
+  transition: transform 0.2s ease;
+}
+
+.map-marker:hover {
+  transform: scale(1.2);
+}

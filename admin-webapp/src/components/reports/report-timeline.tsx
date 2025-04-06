@@ -1,54 +1,112 @@
-import { CheckCircle, Clock, AlertTriangle, User, FileText } from "lucide-react"
+"use client"
+
+import { useEffect, useState } from "react"
+import { CheckCircle, Clock, AlertTriangle, User, FileText, FileImage } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
 export default function ReportTimeline({ report }) {
-  // In a real app, this would come from the report data
-  const timeline = [
-    {
+  const [timeline, setTimeline] = useState([])
+
+  useEffect(() => {
+    // Generate timeline events based on the report data
+    const events = []
+
+    // Always add report submission as first event
+    events.push({
       id: 1,
-      title: "Report Submitted",
-      description: "Citizen submitted initial report",
-      timestamp: "2023-06-15T09:30:00",
+      title: "Complaint Submitted",
+      description: report.is_anonymous ? "Anonymous user submitted complaint" : "User submitted complaint",
+      timestamp: report.created_at,
       icon: FileText,
       status: "complete",
-    },
-    {
-      id: 2,
-      title: "Initial Review",
-      description: "Report reviewed by dispatch",
-      timestamp: "2023-06-15T10:15:00",
-      icon: CheckCircle,
-      status: "complete",
-    },
-    {
-      id: 3,
-      title: "Officer Assigned",
-      description: "Officer Johnson assigned to case",
-      timestamp: "2023-06-15T11:45:00",
-      icon: User,
-      status: "complete",
-    },
-    {
-      id: 4,
-      title: "Investigation In Progress",
-      description: "Officer conducting on-site investigation",
-      timestamp: "2023-06-15T14:20:00",
-      icon: Clock,
-      status: "in-progress",
-    },
-    {
-      id: 5,
-      title: "Evidence Collection",
-      description: "Pending evidence collection",
-      timestamp: "",
-      icon: AlertTriangle,
-      status: "pending",
-    },
-  ]
+    })
+
+    // Add evidence event if present
+    if (report.evidence_url) {
+      events.push({
+        id: 2,
+        title: "Evidence Provided",
+        description: "User uploaded evidence with complaint",
+        timestamp: report.created_at, // Same as report creation
+        icon: FileImage,
+        status: "complete",
+      })
+
+      // Add evidence review event if reviewed
+      if (report.evidence_status === "reviewed") {
+        events.push({
+          id: 3,
+          title: "Evidence Reviewed",
+          description: "Administrator reviewed the evidence",
+          timestamp: null, // We don't have the actual timestamp
+          icon: CheckCircle,
+          status: "complete",
+        })
+      } else {
+        events.push({
+          id: 3,
+          title: "Evidence Review",
+          description: "Pending evidence review by administrator",
+          timestamp: null,
+          icon: Clock,
+          status: "pending",
+        })
+      }
+    }
+
+    // Add status events
+    if (report.complaint_status === "accept") {
+      events.push({
+        id: 4,
+        title: "Complaint Accepted",
+        description: "Administrator accepted the complaint",
+        timestamp: null, // We don't have the actual timestamp
+        icon: CheckCircle,
+        status: "complete",
+      })
+    } else if (report.complaint_status === "reject") {
+      events.push({
+        id: 4,
+        title: "Complaint Rejected",
+        description: "Administrator rejected the complaint",
+        timestamp: null,
+        icon: AlertTriangle,
+        status: "complete",
+      })
+    } else {
+      events.push({
+        id: 4,
+        title: "Complaint Review",
+        description: "Pending complaint review by administrator",
+        timestamp: null,
+        icon: Clock,
+        status: "pending",
+      })
+    }
+
+    // Add notes event if present
+    if (report.notes && report.notes.trim() !== "") {
+      events.push({
+        id: 5,
+        title: "Administrator Notes",
+        description: "Notes added to complaint record",
+        timestamp: null,
+        icon: FileText,
+        status: "complete",
+      })
+    }
+
+    setTimeline(events)
+  }, [report])
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "Date unavailable"
+    return new Date(dateString).toLocaleString()
+  }
 
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-4">Case Timeline</h3>
+      <h3 className="text-lg font-semibold mb-4">Complaint Timeline</h3>
 
       <div className="relative">
         {/* Timeline line */}
@@ -96,7 +154,7 @@ export default function ReportTimeline({ report }) {
                 </div>
                 <p className="text-sm text-gray-500 mt-1">{item.description}</p>
                 {item.timestamp && (
-                  <p className="text-xs text-gray-400 mt-1">{new Date(item.timestamp).toLocaleString()}</p>
+                  <p className="text-xs text-gray-400 mt-1">{formatDate(item.timestamp)}</p>
                 )}
               </div>
             </div>
@@ -106,4 +164,3 @@ export default function ReportTimeline({ report }) {
     </div>
   )
 }
-

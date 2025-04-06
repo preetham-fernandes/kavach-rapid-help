@@ -119,62 +119,10 @@ export default function ReportsPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Complaint Reports</h1>
-          <Button>Export Reports</Button>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
+      
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="flex flex-col md:flex-row gap-4 mb-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-              <Input
-                type="search"
-                placeholder="Search complaints..."
-                className="pl-9"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              />
-            </div>
-            <div className="flex gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center">
-                    <Filter className="h-4 w-4 mr-2" />
-                    Status: {statusFilter === 'all' ? 'All' : statusFilter}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setStatusFilter('all')}>All</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setStatusFilter('pending')}>Pending</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setStatusFilter('accept')}>Accepted</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setStatusFilter('reject')}>Rejected</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center">
-                    <Filter className="h-4 w-4 mr-2" />
-                    Priority: {priorityFilter === 'all' ? 'All' : priorityFilter}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setPriorityFilter('all')}>All</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setPriorityFilter('high')}>High</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setPriorityFilter('medium')}>Medium</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setPriorityFilter('low')}>Low</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <Button onClick={handleSearch}>Search</Button>
-            </div>
-          </div>
-
-          <div className="rounded-md border">
+            <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>

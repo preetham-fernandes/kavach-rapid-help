@@ -1,29 +1,58 @@
-import { Badge } from "@/components/ui/badge"
-import { Calendar, Clock, User, Phone, Mail, AlertTriangle, CheckCircle2, ShieldAlert } from "lucide-react"
+"use client"
 
-export default function ReportDetails({ report }) {
+import { useState } from "react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { Calendar, Clock, User, Phone, Mail, AlertTriangle, CheckCircle2, ShieldAlert, Save } from "lucide-react"
+
+interface ReportDetailsProps {
+  report: any
+  onUpdateNotes: (notes: string) => Promise<boolean>
+  updating: boolean
+}
+
+export default function ReportDetails({ report, onUpdateNotes, updating }: ReportDetailsProps) {
+  const [notes, setNotes] = useState(report.notes || "")
+  const [isEditing, setIsEditing] = useState(false)
+  
+  const handleSaveNotes = async () => {
+    const success = await onUpdateNotes(notes)
+    if (success) {
+      setIsEditing(false)
+    }
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString()
+  }
+
+  const getUserInfo = () => {
+    if (report.is_anonymous) {
+      return "Anonymous Report"
+    }
+    return report.user_id || "User information not available"
+  }
+
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-4">Incident Information</h3>
+      <h3 className="text-lg font-semibold mb-4">Complaint Information</h3>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-4">
           <div>
-            <h4 className="text-sm font-medium text-gray-500">Incident Type</h4>
+            <h4 className="text-sm font-medium text-gray-500">Priority Level</h4>
             <div className="flex items-center mt-1">
-              <Badge variant="outline" className="mr-2">
-                {report.type}
-              </Badge>
               <Badge
                 className={
-                  report.priority === "High"
+                  report.priority === "high"
                     ? "bg-red-500"
-                    : report.priority === "Medium"
+                    : report.priority === "medium"
                       ? "bg-amber-500"
                       : "bg-blue-500"
                 }
               >
-                {report.priority} Priority
+                {report.priority.charAt(0).toUpperCase() + report.priority.slice(1)} Priority
               </Badge>
             </div>
           </div>
@@ -32,9 +61,7 @@ export default function ReportDetails({ report }) {
             <h4 className="text-sm font-medium text-gray-500">Date & Time</h4>
             <div className="flex items-center mt-1">
               <Calendar className="h-4 w-4 text-gray-500 mr-2" />
-              <span className="text-sm">{new Date(report.timestamp).toLocaleDateString()}</span>
-              <Clock className="h-4 w-4 text-gray-500 ml-4 mr-2" />
-              <span className="text-sm">{new Date(report.timestamp).toLocaleTimeString()}</span>
+              <span className="text-sm">{formatDate(report.created_at)}</span>
             </div>
           </div>
 
@@ -42,16 +69,13 @@ export default function ReportDetails({ report }) {
             <h4 className="text-sm font-medium text-gray-500">Reported By</h4>
             <div className="flex items-center mt-1">
               <User className="h-4 w-4 text-gray-500 mr-2" />
-              <span className="text-sm">{report.reportedBy}</span>
+              <span className="text-sm">{getUserInfo()}</span>
             </div>
-            <div className="flex items-center mt-1">
-              <Phone className="h-4 w-4 text-gray-500 mr-2" />
-              <span className="text-sm">{report.contactInfo?.phone || "Not provided"}</span>
-            </div>
-            <div className="flex items-center mt-1">
-              <Mail className="h-4 w-4 text-gray-500 mr-2" />
-              <span className="text-sm">{report.contactInfo?.email || "Not provided"}</span>
-            </div>
+            {report.is_anonymous && (
+              <div className="mt-1 ml-6 text-xs text-amber-600">
+                User chose to remain anonymous
+              </div>
+            )}
           </div>
         </div>
 
@@ -61,38 +85,87 @@ export default function ReportDetails({ report }) {
             <div className="flex items-center mt-1">
               <AlertTriangle className="h-4 w-4 text-gray-500 mr-2" />
               <span className="text-sm">Status: </span>
-              <Badge className="ml-2" variant={report.status === "Resolved" ? "default" : "outline"}>
-                {report.status}
+              <Badge 
+                className={`ml-2 ${
+                  report.complaint_status === "accept"
+                    ? "bg-green-500"
+                    : report.complaint_status === "reject"
+                      ? "bg-red-500"
+                      : "bg-amber-500"
+                }`}
+              >
+                {report.complaint_status.charAt(0).toUpperCase() + report.complaint_status.slice(1)}
               </Badge>
             </div>
             <div className="flex items-center mt-1">
               <CheckCircle2 className="h-4 w-4 text-gray-500 mr-2" />
-              <span className="text-sm">Verification: </span>
-              <Badge className="ml-2" variant={report.verified ? "default" : "outline"}>
-                {report.verified ? "Verified" : "Pending Verification"}
+              <span className="text-sm">Evidence: </span>
+              <Badge className="ml-2" variant={report.evidence_url ? "default" : "outline"}>
+                {report.evidence_url ? "Provided" : "Not Provided"}
               </Badge>
             </div>
-            <div className="flex items-center mt-1">
-              <ShieldAlert className="h-4 w-4 text-gray-500 mr-2" />
-              <span className="text-sm">ID Verification: </span>
-              <Badge className="ml-2" variant={report.idVerified ? "default" : "outline"}>
-                {report.idVerified ? "Verified" : "Not Verified"}
-              </Badge>
-            </div>
+            {report.evidence_url && (
+              <div className="flex items-center mt-1">
+                <ShieldAlert className="h-4 w-4 text-gray-500 mr-2" />
+                <span className="text-sm">Evidence Status: </span>
+                <Badge className="ml-2" variant={report.evidence_status === "reviewed" ? "default" : "outline"}>
+                  {report.evidence_status.charAt(0).toUpperCase() + report.evidence_status.slice(1)}
+                </Badge>
+              </div>
+            )}
           </div>
 
           <div>
-            <h4 className="text-sm font-medium text-gray-500">Description</h4>
-            <p className="text-sm mt-1">{report.description}</p>
-          </div>
-
-          <div>
-            <h4 className="text-sm font-medium text-gray-500">Assigned Officer</h4>
-            <p className="text-sm mt-1">{report.assignedOfficer || "Not yet assigned"}</p>
+            <h4 className="text-sm font-medium text-gray-500">Complaint Description</h4>
+            <p className="text-sm mt-1 p-3 bg-gray-50 rounded-md border border-gray-200 min-h-[100px]">
+              {report.complaint_text}
+            </p>
           </div>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium text-gray-500">Administrative Notes</h4>
+          {!isEditing ? (
+            <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
+              Edit Notes
+            </Button>
+          ) : (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => {
+                setNotes(report.notes || "")
+                setIsEditing(false)
+              }}
+            >
+              Cancel
+            </Button>
+          )}
+        </div>
+        
+        {!isEditing ? (
+          <div className="mt-2 p-3 bg-gray-50 rounded-md border border-gray-200 min-h-[100px] text-sm">
+            {report.notes || "No administrative notes added yet."}
+          </div>
+        ) : (
+          <div className="mt-2">
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add administrative notes about this complaint..."
+              className="min-h-[100px]"
+            />
+            <div className="flex justify-end mt-2">
+              <Button onClick={handleSaveNotes} disabled={updating} size="sm">
+                <Save className="h-4 w-4 mr-2" />
+                Save Notes
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
 }
-

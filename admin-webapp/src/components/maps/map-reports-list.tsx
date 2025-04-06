@@ -40,7 +40,6 @@ export default function MapReportsList() {
               </Badge>
             </div>
             <p className="text-xs text-gray-500 mt-1">{report.location.address}</p>
-            <p className="text-xs text-gray-400 mt-2">{formatDistanceToNow(new Date(report.timestamp))}</p>
           </div>
         ))}
       </div>

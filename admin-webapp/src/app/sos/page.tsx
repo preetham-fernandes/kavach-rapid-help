@@ -25,6 +25,27 @@ const item = {
   show: { opacity: 1, y: 0 },
 }
 
+// Get the display title for a card - showing user name and phone number
+function getCardTitle(report: SosReport): string {
+  let title = "";
+  
+  // Add user's name if available (this will need to be fetched from user profile)
+  if (report.user_name) {
+    title = report.user_name;
+  } else if (report.user_id) {
+    title = `User ${report.user_id.substring(0, 8)}`;
+  } else {
+    title = "Unknown User";
+  }
+  
+  // Add phone number if available
+  if (report.emergency_contact) {
+    title += ` • ${report.emergency_contact}`;
+  }
+  
+  return title;
+}
+
 export default function SosPage() {
   const [reports, setReports] = useState<SosReport[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -131,8 +152,8 @@ export default function SosPage() {
                         <PhoneCall className="h-5 w-5" />
                       </div>
                       <div>
-                        <h3 className="font-medium line-clamp-1">{formatLocation(report.location)}</h3>
-                        <p className="text-sm text-gray-500 line-clamp-1">{report.additional_details || "No details provided"}</p>
+                        <h3 className="font-medium line-clamp-1">{getCardTitle(report)}</h3>
+                        <p className="text-sm text-gray-500 line-clamp-1">{formatLocation(report.location)}</p>
                       </div>
                     </div>
                     <Badge className={getStatusBadgeColor(report.status)}>
@@ -146,9 +167,9 @@ export default function SosPage() {
                       <Clock className="h-4 w-4 mr-1" />
                       {new Date(report.created_at).toLocaleString()}
                     </div>
-                    {report.emergency_contact && (
-                      <div className="text-sm font-medium">
-                        📞 {report.emergency_contact}
+                    {report.additional_details && (
+                      <div className="text-sm text-gray-600 truncate max-w-[140px]">
+                        {report.additional_details}
                       </div>
                     )}
                   </div>

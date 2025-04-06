@@ -2,11 +2,9 @@
 
 import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
-import maplibregl from "maplibre-gl"
-import "maplibre-gl/dist/maplibre-gl.css"
+import { Loader } from "@googlemaps/js-api-loader"
 
-// If you don't have this mock data file, I've included a sample implementation below
-// You can replace this import with the mock data directly in this file if needed
+// Mock data for demonstration
 export const mockReports = [
   {
     id: "report-1",
@@ -52,149 +50,120 @@ export const mockReports = [
     timestamp: "2024-02-28T16:20:00Z",
     priority: "Medium",
     status: "Active",
-  },
-  {
-    id: "report-6",
-    title: "Medical Emergency",
-    description: "Elderly resident collapsed in public park, requires immediate medical assistance",
-    location: { address: "222 Lodhi Gardens, New Delhi", coordinates: [77.2272, 28.5917] },
-    timestamp: "2024-02-28T12:05:00Z",
-    priority: "High",
-    status: "Resolved",
-  },
-  {
-    id: "report-7",
-    title: "Traffic Accident",
-    description: "Auto-rickshaw and motorbike collision at signal, minor injuries reported",
-    location: { address: "Junction of Anna Salai & Mount Road, Chennai", coordinates: [80.2707, 13.0827] },
-    timestamp: "2024-02-28T07:50:00Z",
-    priority: "High",
-    status: "Active",
-  },
-  {
-    id: "report-8",
-    title: "Public Property Damage",
-    description: "Bus shelter vandalized, suspect may have been caught on nearby ATM camera",
-    location: { address: "650 Subhash Chowk, Gurgaon", coordinates: [77.0266, 28.4595] },
-    timestamp: "2024-02-28T03:25:00Z",
-    priority: "Low",
-    status: "Pending",
-  },
-  {
-    id: "report-9",
-    title: "Missing Child",
-    description: "7-year-old separated from family at Dussehra fair, wearing blue kurta",
-    location: { address: "Ramlila Maidan, Old Delhi", coordinates: [77.2377, 28.6381] },
-    timestamp: "2024-02-28T16:40:00Z",
-    priority: "High",
-    status: "Resolved",
-  },
-  {
-    id: "report-10",
-    title: "Unauthorized Street Vendor",
-    description: "Illegal hawking activity blocking pedestrian pathway despite multiple warnings",
-    location: { address: "888 Juhu Beach Road, Mumbai", coordinates: [72.8296, 19.0950] },
-    timestamp: "2024-02-28T21:00:00Z",
-    priority: "Low",
-    status: "New",
   }
 ];
 
 export default function DashboardMap() {
-  const mapContainer = useRef<HTMLDivElement>(null)
-  const map = useRef<maplibregl.Map | null>(null)
+  const mapContainer = useRef(null)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [mapError, setMapError] = useState<string | null>(null)
+  const mapInstance = useRef(null)
+  
+  // Google Maps API key
+  const apiKey = "AIzaSyBBvL8nLBGaoN68zlM1DM7wxau2KN1AknY";
 
   useEffect(() => {
     // Don't initialize if the container isn't ready
     if (!mapContainer.current) return
 
     try {
-      // Initialize the map with proper maplibregl import
-      map.current = new maplibregl.Map({
-        container: mapContainer.current,
-        style: `https://api.maptiler.com/maps/streets/style.json?key=HeRB5Dr0kIRxuboMfGuL`,
-        center: [-74.006, 40.7128], // New York City coordinates
-        zoom: 12,
-      })
+      // Initialize the Google Maps loader
+      const loader = new Loader({
+        apiKey: apiKey,
+        version: "weekly"
+      });
 
-      // Add navigation controls (zoom in/out, etc.)
-      map.current.addControl(
-        new maplibregl.NavigationControl({ showCompass: false }),
-        "top-right"
-      )
+      // Load Google Maps API and initialize the map
+      loader.load().then(() => {
+        // Create the map
+        const map = new google.maps.Map(mapContainer.current, {
+          center: { lat: 21.1670, lng: 72.7822 }, // New York City coordinates 
+          zoom: 12,
+          mapId: "DEMO_MAP_ID", // Optional: Use a custom map style
+          mapTypeControl: false,
+          fullscreenControl: false,
+          streetViewControl: false,
+          zoomControl: true,
+          zoomControlOptions: {
+            position: google.maps.ControlPosition.RIGHT_TOP
+          }
+        });
+        
+        // Save map instance
+        mapInstance.current = map;
+        
+        // Add markers for incidents
+        mockReports.slice(0, 10).forEach((report, index) => {
+          // Generate random positions near NYC for demonstration
+          // In a real app, you would use actual coordinates from your data
+          const lat = 40.7128 + (Math.random() * 0.02 - 0.01);
+          const lng = -74.0060 + (Math.random() * 0.02 - 0.01);
 
-      // Handle map load completion
-      map.current.on("load", () => {
-        console.log("Map loaded successfully")
-        setMapLoaded(true)
+          // Set marker color based on priority
+          let markerColor;
+          if (report.priority === "High") {
+            markerColor = "#ef4444"; // Red
+          } else if (report.priority === "Medium") {
+            markerColor = "#f59e0b"; // Amber
+          } else {
+            markerColor = "#3b82f6"; // Blue
+          }
 
-        // Add markers for incidents once map is loaded
-        if (map.current) {
-          // Use a subset of reports for demonstration
-          mockReports.slice(0, 10).forEach((report, index) => {
-            // Generate random positions near NYC for demonstration
-            // In a real app, you would use actual coordinates from your data
-            const lat = 40.7128 + (Math.random() * 0.02 - 0.01)
-            const lng = -74.006 + (Math.random() * 0.02 - 0.01)
+          // Create SVG marker
+          const svgMarker = {
+            path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",
+            fillColor: markerColor,
+            fillOpacity: 1,
+            strokeWeight: 1,
+            strokeColor: "#ffffff",
+            rotation: 0,
+            scale: 1.5,
+            anchor: new google.maps.Point(12, 22),
+          };
 
-            // Create a custom marker element
-            const el = document.createElement("div")
-            el.className = "marker"
-            el.style.width = "12px"
-            el.style.height = "12px"
-            el.style.borderRadius = "50%"
-            el.style.cursor = "pointer"
-            el.style.boxShadow = "0 0 0 2px white"
+          // Create and add the marker
+          const marker = new google.maps.Marker({
+            position: { lat, lng },
+            map: map,
+            title: report.title,
+            icon: svgMarker,
+            animation: google.maps.Animation.DROP
+          });
 
-            // Set color based on priority
-            if (report.priority === "High") {
-              el.style.backgroundColor = "#ef4444" // Red
-            } else if (report.priority === "Medium") {
-              el.style.backgroundColor = "#f59e0b" // Amber
-            } else {
-              el.style.backgroundColor = "#3b82f6" // Blue
-            }
+          // Create info window
+          const infoWindow = new google.maps.InfoWindow({
+            content: `
+              <div style="font-family: Arial, sans-serif; max-width: 200px; padding: 8px;">
+                <h3 style="margin: 0 0 5px; font-size: 14px; font-weight: 600;">${report.title}</h3>
+                <p style="margin: 0 0 5px; font-size: 12px; color: #666;">${report.location.address}</p>
+                <p style="margin: 0; font-size: 12px; color: #666;">${report.description?.substring(0, 60) + "..." || ""}</p>
+              </div>
+            `
+          });
 
-            // Create and add the marker with popup
-            new maplibregl.Marker(el)
-              .setLngLat([lng, lat])
-              .setPopup(
-                new maplibregl.Popup({ offset: 25, closeButton: false })
-                  .setHTML(
-                    `<div class="p-2">
-                      <h3 class="text-sm font-bold">${report.title}</h3>
-                      <p class="text-xs">${report.location.address}</p>
-                      <p class="text-xs mt-1 text-gray-500">${
-                        report.description?.substring(0, 60) + "..." || ""
-                      }</p>
-                    </div>`
-                  )
-              )
-              .addTo(map.current)
-          })
-        }
-      })
+          // Add click listener
+          marker.addListener('click', () => {
+            infoWindow.open(map, marker);
+          });
+        });
 
-      // Add error handling
-      map.current.on("error", (e) => {
-        console.error("Map error:", e)
-        setMapError("Failed to load map properly")
-      })
-
+        setMapLoaded(true);
+      }).catch(error => {
+        console.error("Error loading Google Maps:", error);
+        setMapError("Failed to load map properly");
+        setMapLoaded(true); // Mark as loaded to remove spinner
+      });
     } catch (err) {
-      console.error("Error initializing map:", err)
-      setMapError("Failed to initialize map")
+      console.error("Error initializing map:", err);
+      setMapError("Failed to initialize map");
+      setMapLoaded(true); // Mark as loaded to remove spinner
     }
 
-    // Cleanup function to properly remove the map instance when the component unmounts
+    // Cleanup function
     return () => {
-      if (map.current) {
-        map.current.remove()
-      }
-    }
-  }, []) // Empty dependency array means this runs once on component mount
+      mapInstance.current = null;
+    };
+  }, []); // Empty dependency array means this runs once on component mount
 
   return (
     <div className="relative h-[300px] rounded-lg overflow-hidden border border-gray-200">
@@ -255,11 +224,3 @@ export default function DashboardMap() {
     </div>
   )
 }
-
-// If you don't have a mock-data.ts file, you can use this sample data:
-// Replace the import at the top with this constant
-
-/*
-
-*/
-

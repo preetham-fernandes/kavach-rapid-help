@@ -9,8 +9,7 @@ import {
   PhoneCall, MapPin, Clock, User, MessageSquare, 
   FileText, CheckCircle, AlertTriangle, Play, Pause, Volume2 
 } from 'lucide-react'
-import maplibregl from 'maplibre-gl'
-import 'maplibre-gl/dist/maplibre-gl.css'
+import { Loader } from '@googlemaps/js-api-loader'
 import { SosReport, formatLocation, getAudioUrl } from '@/lib/sos-utils'
 import { Progress } from '@/components/ui/progress'
 
@@ -21,13 +20,17 @@ interface SosCallDetailProps {
 export default function SosCallDetail({ sosReport }: SosCallDetailProps) {
   const [activeTab, setActiveTab] = useState('details')
   const mapContainer = useRef<HTMLDivElement>(null)
-  const map = useRef<maplibregl.Map | null>(null)
+  const map = useRef<google.maps.Map | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
   const [duration, setDuration] = useState(0)
   const [currentTime, setCurrentTime] = useState(0)
   const [audioReady, setAudioReady] = useState(false)
+  const [mapLoaded, setMapLoaded] = useState(false)
+  
+  // Google Maps API key
+  const apiKey = "AIzaSyBBvL8nLBGaoN68zlM1DM7wxau2KN1AknY";
 
   // Configure audio player
   useEffect(() => {
@@ -88,54 +91,105 @@ export default function SosCallDetail({ sosReport }: SosCallDetailProps) {
 
   // Initialize map when component mounts and sosReport changes
   useEffect(() => {
-    if (!mapContainer.current) return
-
+    if (!mapContainer.current || activeTab !== 'location' || mapLoaded) return
+    
     // Get coordinates from location
-let lat = 19.0760, lng = 72.8777;  // Default to Mumbai coordinates
+    let lat = 19.0760, lng = 72.8777;  // Default to Mumbai coordinates
 
-if (sosReport.location) {
-  if (typeof sosReport.location === 'string') {
-    try {
-      const locationObj = JSON.parse(sosReport.location);
-      if (locationObj.coordinates) {
-        lat = locationObj.coordinates.latitude || lat;
-        lng = locationObj.coordinates.longitude || lng;
+    if (sosReport.location) {
+      if (typeof sosReport.location === 'string') {
+        try {
+          const locationObj = JSON.parse(sosReport.location);
+          if (locationObj.coordinates) {
+            lat = locationObj.coordinates.latitude || lat;
+            lng = locationObj.coordinates.longitude || lng;
+          }
+        } catch (e) {
+          console.error('Failed to parse location', e);
+        }
+      } else if (sosReport.location.coordinates) {
+        lat = sosReport.location.coordinates.latitude || lat;
+        lng = sosReport.location.coordinates.longitude || lng;
       }
-    } catch (e) {
-      console.error('Failed to parse location', e);
     }
-  } else if (sosReport.location.coordinates) {
-    lat = sosReport.location.coordinates.latitude || lat;
-    lng = sosReport.location.coordinates.longitude || lng;
-  }
-}
 
-    // Initialize map
-    if (map.current) map.current.remove()
+    // Load Google Maps API
+    const loader = new Loader({
+      apiKey: apiKey,
+      version: "weekly"
+    });
 
-    map.current = new maplibregl.Map({
-      container: mapContainer.current,
-      style: 'https://api.maptiler.com/maps/streets/style.json?key=HeRB5Dr0kIRxuboMfGuL',
-      center: [lng, lat],
-      zoom: 14,
-    })
+    loader.load().then(() => {
+      // Create the map
+      const mapOptions = {
+        center: { lat: parseFloat(lat), lng: parseFloat(lng) },
+        zoom: 14,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: true,
+        zoomControl: true,
+      };
 
-    // Add marker for SOS location
-    new maplibregl.Marker({ color: '#ef4444' })
-      .setLngLat([lng, lat])
-      .addTo(map.current)
+      // Initialize map
+      const googleMap = new google.maps.Map(mapContainer.current!, mapOptions);
+      map.current = googleMap;
+      
+      // Add marker for SOS location
+      const marker = new google.maps.Marker({
+        position: { lat: parseFloat(lat), lng: parseFloat(lng) },
+        map: googleMap,
+        icon: {
+          path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",
+          fillColor: "#ef4444", // red
+          fillOpacity: 1,
+          strokeWeight: 1,
+          strokeColor: "#ffffff",
+          rotation: 0,
+          scale: 1.5,
+          anchor: new google.maps.Point(12, 22),
+        },
+        animation: google.maps.Animation.DROP,
+        title: "Emergency Location"
+      });
 
-    // Add navigation control
-    map.current.addControl(new maplibregl.NavigationControl())
+      // Add info window with location details
+      const infoWindow = new google.maps.InfoWindow({
+        content: `
+          <div style="font-family: system-ui, sans-serif; padding: 8px; max-width: 200px;">
+            <h3 style="margin: 0 0 8px; font-size: 14px; font-weight: 600;">Emergency Location</h3>
+            <p style="margin: 0 0 5px; font-size: 12px;">${formatLocation(sosReport.location)}</p>
+            <p style="margin: 0; font-size: 12px; color: #666;">
+              Reported: ${new Date(sosReport.created_at).toLocaleString()}
+            </p>
+          </div>
+        `
+      });
+
+      // Open info window on marker click
+      marker.addListener('click', () => {
+        infoWindow.open({
+          anchor: marker,
+          map: googleMap
+        });
+      });
+
+      // Open info window by default
+      infoWindow.open({
+        anchor: marker,
+        map: googleMap
+      });
+
+      setMapLoaded(true);
+    }).catch(error => {
+      console.error("Error loading Google Maps:", error);
+    });
 
     return () => {
-      if (map.current && typeof map.current.remove === 'function') {
-        map.current.remove()
-        map.current = null
-      }
-    }
-    
-  }, [sosReport, activeTab])
+      // No explicit cleanup needed for Google Maps
+      map.current = null;
+      setMapLoaded(false);
+    };
+  }, [sosReport, activeTab]);
 
   return (
     <div className="p-6">
@@ -259,7 +313,32 @@ if (sosReport.location) {
                 </Button>
               )}
 
-              <Button className="w-full" variant="outline">
+              <Button 
+                className="w-full" 
+                variant="outline"
+                onClick={() => {
+                  // Open Google Maps directions in a new tab
+                  if (sosReport.location && 
+                      (typeof sosReport.location === 'object' && 
+                       sosReport.location.coordinates && 
+                       sosReport.location.coordinates.latitude && 
+                       sosReport.location.coordinates.longitude)) {
+                    const lat = typeof sosReport.location === 'object' 
+                      ? sosReport.location.coordinates.latitude 
+                      : null;
+                    const lng = typeof sosReport.location === 'object' 
+                      ? sosReport.location.coordinates.longitude 
+                      : null;
+                    
+                    if (lat && lng) {
+                      window.open(
+                        `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`,
+                        '_blank'
+                      );
+                    }
+                  }
+                }}
+              >
                 <MapPin className="h-4 w-4 mr-2" />
                 Get Directions
               </Button>
@@ -283,40 +362,69 @@ if (sosReport.location) {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-1 space-y-4">
-              <div>
-  <p className="text-sm font-medium">Address/Location</p>
-  <p className="text-sm text-gray-600">{formatLocation(sosReport.location)}</p>
-</div>
+                <div>
+                  <p className="text-sm font-medium">Address/Location</p>
+                  <p className="text-sm text-gray-600">{formatLocation(sosReport.location)}</p>
+                </div>
 
-<div>
-  <p className="text-sm font-medium">Coordinates</p>
-  {typeof sosReport.location === 'object' && 
-   sosReport.location && 
-   sosReport.location.coordinates && 
-   sosReport.location.coordinates.latitude && 
-   sosReport.location.coordinates.longitude ? (
-    <p className="text-sm text-gray-600">
-      Lat: {sosReport.location.coordinates.latitude}, Long: {sosReport.location.coordinates.longitude}
-    </p>
-  ) : (
-    <p className="text-sm text-gray-600">Coordinates not available</p>
-  )}
-</div>
+                <div>
+                  <p className="text-sm font-medium">Coordinates</p>
+                  {typeof sosReport.location === 'object' && 
+                  sosReport.location && 
+                  sosReport.location.coordinates && 
+                  sosReport.location.coordinates.latitude && 
+                  sosReport.location.coordinates.longitude ? (
+                    <p className="text-sm text-gray-600">
+                      Lat: {sosReport.location.coordinates.latitude}, Long: {sosReport.location.coordinates.longitude}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-600">Coordinates not available</p>
+                  )}
+                </div>
 
                 <div>
                   <p className="text-sm font-medium">Reported Time</p>
                   <p className="text-sm text-gray-600">{new Date(sosReport.created_at).toLocaleString()}</p>
                 </div>
 
-                <Button className="w-full">
+                <Button 
+                  className="w-full"
+                  onClick={() => {
+                    // Open Google Maps directions in a new tab
+                    if (sosReport.location && 
+                        (typeof sosReport.location === 'object' && 
+                        sosReport.location.coordinates && 
+                        sosReport.location.coordinates.latitude && 
+                        sosReport.location.coordinates.longitude)) {
+                      const lat = typeof sosReport.location === 'object' 
+                        ? sosReport.location.coordinates.latitude 
+                        : null;
+                      const lng = typeof sosReport.location === 'object' 
+                        ? sosReport.location.coordinates.longitude 
+                        : null;
+                      
+                      if (lat && lng) {
+                        window.open(
+                          `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`,
+                          '_blank'
+                        );
+                      }
+                    }
+                  }}
+                >
                   <MapPin className="h-4 w-4 mr-2" />
                   Get Directions
                 </Button>
               </div>
 
               <div className="md:col-span-2">
-                <div className="h-[400px] rounded-lg overflow-hidden border border-gray-200">
+                <div className="h-[400px] rounded-lg overflow-hidden border border-gray-200 relative">
                   <div ref={mapContainer} className="h-full w-full" />
+                  {!mapLoaded && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

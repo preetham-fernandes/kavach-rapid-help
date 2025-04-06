@@ -35,7 +35,6 @@ export default function IncidentFeed() {
             </Badge>
           </div>
           <div className="flex justify-between items-center mt-3">
-            <p className="text-xs text-gray-500">{formatDistanceToNow(new Date(report.timestamp))}</p>
             <Badge
               variant="outline"
               className={
