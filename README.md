@@ -1,6 +1,6 @@
 # Kavach - AI-Powered Crime Reporting & Prevention Platform
 
-![Kavach Control Unit](https://placeholder.com/logo)
+You can view our project at: https://drive.google.com/drive/folders/1hGWv3fDqR0KRqffu0I815vC8Xe9Sjcto?usp=sharing 
 
 ## Table of Contents
 - [Overview](#overview)
